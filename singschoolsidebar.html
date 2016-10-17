@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+      <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons.css">
+      <style>
+      input[type="time"] {
+        margin: 5px;
+      }
+      #output {
+       background-color: green;
+       color: #fff;
+      }
+      
+      #output h4 {
+      padding: 5px;
+      color: #fff;
+       }
+      /* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {display:none;}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+      </style>
+    <script>
+      // Prevent forms from submitting.
+      function preventFormSubmit() {
+        var forms = document.querySelectorAll('form');
+        for (var i = 0; i < forms.length; i++) {
+          forms[i].addEventListener('submit', function(event) {
+            event.preventDefault();
+          });
+        }
+      }
+      window.addEventListener('load', preventFormSubmit);
+
+      function handleFormSubmit(formObject) {
+        google.script.run.withSuccessHandler(updateUrl).processForm(formObject);
+      }
+      function updateUrl(url) {
+        var div = document.getElementById('output');
+        div.innerHTML = '<h4>You did it!</h4>';
+      }
+    </script>
+  </head>
+  <body>
+   <div id="output"></div>
+    <form id="myForm" onsubmit="handleFormSubmit(this)">
+      <fieldset>
+       <legend>Pick Your Date</legend>
+          <input id='datePicker' type="date" name="theDate">
+      </fieldset>    
+      <fieldset>
+         <legend>Start/End Times</legend>    
+         <label for="startTime">Start:</label>
+         <input id="startTime" type="time" name="startTime" value="08:00" ><br/>
+         <label for="startTime">End:</label>
+         <input id="endTime" type="time" name="endTime"  value="16:00"> 
+      </fieldset>
+      <fieldset>
+      <legend>Hide Previous Dates</legend>
+      <label class="switch">
+      <input type="checkbox" id="hider" name="hider" checked>
+      <div class="slider round"></div>
+      </label>
+      </fieldset>
+       
+     <button class="action" type="submit">Submit</button>
+     
+    </form>
+ <!--        <input type="button" value="Close" onclick="google.script.host.close()" />-->
+     <script>
+     //*********THE DEFAULTS *********
+  //sets date to current date by default*********DATE
+         Date.prototype.toDateInputValue = (function() {
+          var local = new Date(this);
+          local.setMinutes(this.getMinutes() - this.getTimezoneOffset());
+          return local.toJSON().slice(0,10);
+     });
+     
+     document.getElementById('datePicker').value = new Date().toDateInputValue();
+        
+  //sets the form values with default start/end times*********TIMES from validation sheet cells C1 & C2
+     function onSuccess(startTime) {        
+        document.getElementById('startTime').value = startTime;
+      }
+
+      google.script.run.withSuccessHandler(onSuccess)
+          .getDefaultStartTime();                 
+          
+        
+     function onSuccessB(endTime) {        
+        document.getElementById('endTime').value = endTime;
+      }
+
+      google.script.run.withSuccessHandler(onSuccessB)
+          .getDefaultEndTime();     
+         </script>
+         
+ </body>
+</html>
