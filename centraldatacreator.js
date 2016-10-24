@@ -1,95 +1,108 @@
+//adds menu item
 function onOpen() {
-    var ui = SpreadsheetApp.getUi();
-    // Or DocumentApp or FormApp.
-    ui.createMenu('Extra Powers')
-        .addItem('DEPLOY', 'makeFiles')
-        .addToUi();
+  SpreadsheetApp.getUi() 
+      .createMenu('Add Time')
+      .addItem('Do it!', 'addTime')
+      .addToUi();
 }
 
 
-function makeFiles() {
-  //gets spreadsheet
-   var ss = SpreadsheetApp.getActiveSpreadsheet(); //get spreadsheet   
-   var sheet = ss.getSheetByName('Info'); //get sheet
+//set validation elements 
+function validationRighter(){
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  //gets the enclosing folder
-   var ssId = ss.getId();
-   var driveFile = DriveApp.getFileById(ssId); 
+    var meetColumn = ss.getSheetByName('Sheet1').getRange('C2:C'); //meeting types
+    var meetValidationValues = ss.getSheetByName('validation').getRange('A1:A40').getValues();
+    var meetRule = SpreadsheetApp.newDataValidation().requireValueInList(meetValidationValues).build();
+    meetColumn.setDataValidation(meetRule);
   
-   var parentFolder = driveFile.getParents();
-   var folder = DriveApp.getFolderById(parentFolder.next().getId()); //ASSUMES one parent folder, you could always hard code it in
+    var appColumn = ss.getSheetByName('Sheet1').getRange('D2:D'); //application options
+    var appValidationValues = ss.getSheetByName('validation').getRange('B1:B40').getValues();
+    var appRule = SpreadsheetApp.newDataValidation().requireValueInList(appValidationValues).build();
+    appColumn.setDataValidation(appRule);
   
-  //get schools
-  var schools = sheet.getRange("A2:A").getValues();
-  var schoolsLastRow = schools.filter(String).length;
-  
-  //get categories
-  var catVals = sheet.getRange("E2:E").getValues();
-  var appVals = sheet.getRange("F2:F").getValues();
+    var userColumn = ss.getSheetByName('Sheet1').getRange('E2:E'); //teacher signup options
+    var userValidationValues = ss.getEditors();
+    Logger.log(userValidationValues);
+    var userRule = SpreadsheetApp.newDataValidation().requireValueInList(userValidationValues).build();
+    userColumn.setDataValidation(userRule);
  
-  //get start/end times
-  var startTimeVals = sheet.getRange("C2:C").getValues();
-  var endTimeVals = sheet.getRange("D2:D").getValues();
-
-  //get emails for sharing directly with ITRT or onsite admin
-   var emailVals = sheet.getRange("G2:G").getValues();
-
-  //create template ss 
-  var templateId = DriveApp.getFilesByName('base school template').next().getId();
-  var templateSs = SpreadsheetApp.openById(templateId);
-  var mainSheet = templateSs.getSheets()[0];
-  
-  //set header values and data validation for the main sheet
-  mainSheet.getRange("A1:E1").setBackground("#424242").setFontStyle("bold").setFontColor("#fff");//sets header styles
-  //sets header values
-  mainSheet.getRange("A1").setValue("Date");
-  mainSheet.getRange("B1").setValue("Meeting Time");
-  mainSheet.getRange("C1").setValue("Meeting Type");  
-  
-//data validation - set hidden sheet and values  
-   var validation =  templateSs.insertSheet('validation');
-    validation.getRange("A1:A"+catVals.length).setValues(catVals);  
-    validation.getRange("B1:B"+appVals.length).setValues(appVals);
-    validation.hideSheet();
-
-//Make folders and files per school
-  for (i = 0; i < schoolsLastRow; i++) { 
-    Logger.log('school leng- ' + schools.length)
-    var newFolder = folder.createFolder(schools[i]); //creates folder
-    newFolder.addEditor(emailVals[i]);
-    var schoolFolderId = DriveApp.getFoldersByName(schools[i]).next().getId(); //gets folder ID    
-    Logger.log('i count - '+i);
-    var newSs = DriveApp.getFileById(templateId).makeCopy(schools[i] + ' data', newFolder); //copies ss over
-    var newSsId = DriveApp.getFilesByName(schools[i] + ' data').next().getId();
-    var newSsUrl = newSs.getId();
-    
-    var startTime = SpreadsheetApp.openById(newSsId).getSheetByName('validation').getRange('C1');
-    var endTime = SpreadsheetApp.openById(newSsId).getSheetByName('validation').getRange('C2');
-    
-    startTime.setValue(startTimeVals[i]).setNumberFormat('h:mm:ss am/pm');//set time value*******************
-    endTime.setValue(endTimeVals[i]).setNumberFormat('h:mm:ss am/pm');  
-    
-    //write new sheet IDs to master sheet for later
-    var dataSheet = ss.getSheetByName('Research');
-    dataSheet.getRange('A'+(i+2)).setValue(schools[i]);
-    dataSheet.getRange('B'+(i+2)).setValue(newSsUrl);
-  }     
 }
 
 
+//add time sidebar creation
+function addTime() {
+  var html = HtmlService.createHtmlOutputFromFile('sidebar')
+      .setTitle('Add Time')
+      .setWidth(300);
+  SpreadsheetApp.getUi() // Or DocumentApp or FormApp.
+      .showSidebar(html);
+}
 
-function myTest(){
-  var ss = SpreadsheetApp.getActiveSpreadsheet(); //get spreadsheet
-  Logger.log(ss.getId());
-   var sheet = ss.getSheets()[0]; //get sheet
+//enter days in 15 min intervals
+function enterDay(theDate,startTime,endTime) {
+ var ss = SpreadsheetApp.getActiveSpreadsheet();
+ var sheet = ss.getActiveSheet();
+ var lastRow = parseInt(sheet.getLastRow())+1;
   
+  var startH = startTime.split(':')[0];
+  var endH = endTime.split(':')[0];
+  var startM = startTime.split(':')[1];
+  var d = new Date();
+  d.setHours(startH);
+  d.setMinutes(startM);  
   
+  var totalHours = endH-startH;
+    
+  for (i = 0; i < (totalHours*4)+1; i++) { 
+    sheet.getRange("A"+(lastRow+i)).setValue(theDate);
+    
+    var mins = (d.getMinutes()<10?'0':'') + d.getMinutes();//make sure has leading 0
+    sheet.getRange("B"+(lastRow+i)).setValue(d.getHours()+':'+mins);
+    d = new Date(d.getTime() + (15*60000)); //adds 15 mins
+  }
+}
+
+function hideAllRows(){
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var lastRow = sheet.getLastRow();
+  sheet.hideRows(2, lastRow);
 }
 
 
-//********************testing stuff and random non-production stuff
-function theCleaner(){       
-  var ss = SpreadsheetApp.openById('1Zld-1tWo9XsUYlTRwljAulGwwE4cPcU2G95yI2i8kOE');
-  var validation =  ss.getSheetByName('validation');
-  ss.deleteSheet(validation);
+function processForm(formObject) {
+  var theDate = formObject.theDate;
+  var startTime = formObject.startTime;
+  var endTime = formObject.endTime;
+  var hideRows = formObject.hider;
+  Logger.log(hideRows);
+  if (hideRows === 'on'){
+    hideAllRows();
+  }
+  
+  enterDay(theDate, startTime, endTime);
+  validationRighter();
+  
+}
+
+function getDefaultStartTime(){
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('validation');
+  var am = sheet.getRange("C1").getValue();
+   h = (am.getHours()<10?'0':'') + am.getHours(),
+   m = (am.getMinutes()<10?'0':'') + am.getMinutes();
+   var startHr = h + ':' + m;
+   return startHr;
+}
+
+function getDefaultEndTime(){
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('validation');
+  var pm = sheet.getRange("C2").getValue();
+   h = (pm.getHours()<10?'0':'') + pm.getHours(),
+   m = (pm.getMinutes()<10?'0':'') + pm.getMinutes();
+  var endHr = h + ':' + m;;
+  Logger.log(endHr);
+  return endHr;
 }
